@@ -106,7 +106,7 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
 
         if ui.button("Importer un fichier audio").clicked() {
             if let Some(path) = FileDialog::new()
-                .add_filter("WAV Files", &["wav"])
+                .add_filter("Fichiers WAV", &["wav"])
                 .pick_file() {
 
                 let mut audio = audio_data.lock().unwrap();
@@ -134,11 +134,11 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
             } else {
                 match audio.save_file(None) {
                     Ok(_) => {
-                        ui_state.success_message = Some("File saved successfully".to_string());
+                        ui_state.success_message = Some("Fichier sauvegardé avec succès".to_string());
                         ui_state.current_message_timer = 3.0;
                     },
                     Err(e) => {
-                        ui_state.error_message = Some(format!("Error saving file: {}", e));
+                        ui_state.error_message = Some(format!("Erreur lors de la sauvegarde: {}", e));
                         ui_state.current_message_timer = 3.0;
                     },
                 }
@@ -147,24 +147,24 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
 
         ui.add_space(10.0);
 
-        if ui.button("Save As...").clicked() {
+        if ui.button("Sauvegarder sous...").clicked() {
             let audio = audio_data.lock().unwrap();
             if audio.samples.is_empty() {
                 drop(audio);
-                ui_state.error_message = Some("No audio loaded".to_string());
+                ui_state.error_message = Some("Aucun audio chargé".to_string());
                 ui_state.current_message_timer = 3.0;
             } else {
                 if let Some(path) = FileDialog::new()
-                    .add_filter("WAV Files", &["wav"])
+                    .add_filter("Fichiers WAV", &["wav"])
                     .save_file() {
 
                     match audio.save_file(Some(path)) {
                         Ok(_) => {
-                            ui_state.success_message = Some("File saved successfully".to_string());
+                            ui_state.success_message = Some("Fichier sauvegardé avec succès".to_string());
                             ui_state.current_message_timer = 3.0;
                         },
                         Err(e) => {
-                            ui_state.error_message = Some(format!("Error saving file: {}", e));
+                            ui_state.error_message = Some(format!("Erreur lors de la sauvegarde: {}", e));
                             ui_state.current_message_timer = 3.0;
                         },
                     }
@@ -181,7 +181,7 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
         // Waveform visualization
         let waveform_height = 200.0;
 
-        ui.label("Audio Waveform:");
+        ui.label("Forme d'onde audio:");
         let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), waveform_height), egui::Sense::click_and_drag());
 
         if ui.is_rect_visible(rect) {
@@ -229,11 +229,11 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
 
         // Playback controls
         ui.horizontal(|ui| {
-            if ui.button(if audio.playing { "⏸ Pause" } else { "▶ Play" }).clicked() {
+            if ui.button(if audio.playing { "⏸ Pause" } else { "▶ Lecture" }).clicked() {
                 audio.playing = !audio.playing;
             }
 
-            if ui.button("⏹ Stop").clicked() {
+            if ui.button("⏹ Arrêt").clicked() {
                 audio.playing = false;
                 audio.playback_position = 0;
             }
@@ -256,29 +256,29 @@ fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_s
     if !audio_loaded {
         ui.vertical_centered(|ui| {
             ui.add_space(50.0);
-            ui.label("No audio file loaded. Please import an audio file first.");
+            ui.label("Aucun fichier audio chargé. Veuillez d'abord importer un fichier audio.");
         });
         return;
     }
 
     ui.vertical(|ui| {
         ui.add_space(20.0);
-        ui.heading("Audio Effects");
+        ui.heading("Effets Audio");
         ui.add_space(20.0);
 
         // Amplification
         ui.horizontal(|ui| {
             ui.label("Amplification: ");
-            if ui.button("Configure").clicked() {
+            if ui.button("Configurer").clicked() {
                 effects_state.show_amplify_modal = true;
             }
-            if ui.button("Apply").clicked() {
+            if ui.button("Appliquer").clicked() {
                 let mut audio = audio_data.lock().unwrap();
                 effects::amplify(&mut audio.samples, effects_state.amplify_gain);
                 audio.modified = true;
                 audio.generate_visualization_data();
 
-                ui_state.success_message = Some(format!("Applied amplification with gain: {:.2}", effects_state.amplify_gain));
+                ui_state.success_message = Some(format!("Amplification appliquée avec gain: {:.2}", effects_state.amplify_gain));
                 ui_state.current_message_timer = 3.0;
             }
         });
@@ -287,17 +287,17 @@ fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_s
 
         // Anti-distortion
         ui.horizontal(|ui| {
-            ui.label("Anti-distortion: ");
-            if ui.button("Configure").clicked() {
+            ui.label("Anti-distorsion: ");
+            if ui.button("Configurer").clicked() {
                 effects_state.show_anti_distortion_modal = true;
             }
-            if ui.button("Apply").clicked() {
+            if ui.button("Appliquer").clicked() {
                 let mut audio = audio_data.lock().unwrap();
                 effects::anti_distortion(&mut audio.samples, effects_state.anti_distortion_threshold);
                 audio.modified = true;
                 audio.generate_visualization_data();
 
-                ui_state.success_message = Some(format!("Applied anti-distortion with threshold: {:.2}", effects_state.anti_distortion_threshold));
+                ui_state.success_message = Some(format!("Anti-distorsion appliquée avec seuil: {:.2}", effects_state.anti_distortion_threshold));
                 ui_state.current_message_timer = 3.0;
             }
         });
@@ -306,17 +306,17 @@ fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_s
 
         // Noise reduction
         ui.horizontal(|ui| {
-            ui.label("Noise reduction: ");
-            if ui.button("Configure").clicked() {
+            ui.label("Réduction de bruit: ");
+            if ui.button("Configurer").clicked() {
                 effects_state.show_noise_reduction_modal = true;
             }
-            if ui.button("Apply").clicked() {
+            if ui.button("Appliquer").clicked() {
                 let mut audio = audio_data.lock().unwrap();
                 effects::noise_reduction(&mut audio.samples, effects_state.noise_reduction_threshold);
                 audio.modified = true;
                 audio.generate_visualization_data();
 
-                ui_state.success_message = Some(format!("Applied noise reduction with threshold: {:.2}", effects_state.noise_reduction_threshold));
+                ui_state.success_message = Some(format!("Réduction de bruit appliquée avec seuil: {:.2}", effects_state.noise_reduction_threshold));
                 ui_state.current_message_timer = 3.0;
             }
         });
@@ -324,14 +324,14 @@ fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_s
         ui.add_space(10.0);
 
         // Audio statistics
-        ui.collapsing("Audio Statistics", |ui| {
+        ui.collapsing("Statistiques Audio", |ui| {
             let audio = audio_data.lock().unwrap();
             let peak = effects::compute_peak(&audio.samples);
             let rms = effects::compute_rms(&audio.samples);
 
-            ui.label(format!("Peak amplitude: {:.4}", peak));
-            ui.label(format!("RMS level: {:.4}", rms));
-            ui.label(format!("Crest factor: {:.2} dB", 20.0 * (peak / rms).log10()));
+            ui.label(format!("Amplitude maximale: {:.4}", peak));
+            ui.label(format!("Niveau RMS: {:.4}", rms));
+            ui.label(format!("Facteur de crête: {:.2} dB", 20.0 * (peak / rms).log10()));
         });
     });
 }
@@ -344,30 +344,30 @@ fn render_modals(
 ) {
     // Amplification modal
     if effects_state.show_amplify_modal {
-        egui::Window::new("Amplification Settings")
+        egui::Window::new("Paramètres d'Amplification")
             .fixed_size([300.0, 150.0])
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
-                ui.label("Adjust amplification gain:");
+                ui.label("Ajuster le gain d'amplification:");
                 ui.add(egui::Slider::new(&mut effects_state.amplify_gain, 0.1..=5.0).text("Gain"));
 
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    if ui.button("Apply").clicked() {
+                    if ui.button("Appliquer").clicked() {
                         let mut audio = audio_data.lock().unwrap();
                         effects::amplify(&mut audio.samples, effects_state.amplify_gain);
                         audio.modified = true;
                         audio.generate_visualization_data();
 
                         effects_state.show_amplify_modal = false;
-                        ui_state.success_message = Some(format!("Applied amplification with gain: {:.2}", effects_state.amplify_gain));
+                        ui_state.success_message = Some(format!("Amplification appliquée avec gain: {:.2}", effects_state.amplify_gain));
                         ui_state.current_message_timer = 3.0;
                     }
 
-                    if ui.button("Cancel").clicked() {
+                    if ui.button("Annuler").clicked() {
                         effects_state.show_amplify_modal = false;
                     }
                 });
@@ -376,30 +376,30 @@ fn render_modals(
 
     // Anti-distortion modal
     if effects_state.show_anti_distortion_modal {
-        egui::Window::new("Anti-distortion Settings")
+        egui::Window::new("Paramètres d'Anti-distorsion")
             .fixed_size([300.0, 150.0])
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
-                ui.label("Set the threshold level for limiting:");
-                ui.add(egui::Slider::new(&mut effects_state.anti_distortion_threshold, 0.1..=1.0).text("Threshold"));
+                ui.label("Définir le niveau de seuil pour la limitation:");
+                ui.add(egui::Slider::new(&mut effects_state.anti_distortion_threshold, 0.1..=1.0).text("Seuil"));
 
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    if ui.button("Apply").clicked() {
+                    if ui.button("Appliquer").clicked() {
                         let mut audio = audio_data.lock().unwrap();
                         effects::anti_distortion(&mut audio.samples, effects_state.anti_distortion_threshold);
                         audio.modified = true;
                         audio.generate_visualization_data();
 
                         effects_state.show_anti_distortion_modal = false;
-                        ui_state.success_message = Some(format!("Applied anti-distortion with threshold: {:.2}", effects_state.anti_distortion_threshold));
+                        ui_state.success_message = Some(format!("Anti-distorsion appliquée avec seuil: {:.2}", effects_state.anti_distortion_threshold));
                         ui_state.current_message_timer = 3.0;
                     }
 
-                    if ui.button("Cancel").clicked() {
+                    if ui.button("Annuler").clicked() {
                         effects_state.show_anti_distortion_modal = false;
                     }
                 });
@@ -408,30 +408,30 @@ fn render_modals(
 
     // Noise reduction modal
     if effects_state.show_noise_reduction_modal {
-        Window::new("Noise Reduction Settings")
+        Window::new("Paramètres de Réduction de Bruit")
             .fixed_size([300.0, 150.0])
             .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
-                ui.label("Set noise threshold level:");
-                ui.add(egui::Slider::new(&mut effects_state.noise_reduction_threshold, 0.001..=0.1).text("Threshold"));
+                ui.label("Définir le niveau de seuil du bruit:");
+                ui.add(egui::Slider::new(&mut effects_state.noise_reduction_threshold, 0.001..=0.1).text("Seuil"));
 
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    if ui.button("Apply").clicked() {
+                    if ui.button("Appliquer").clicked() {
                         let mut audio = audio_data.lock().unwrap();
                         effects::noise_reduction(&mut audio.samples, effects_state.noise_reduction_threshold);
                         audio.modified = true;
                         audio.generate_visualization_data();
 
                         effects_state.show_noise_reduction_modal = false;
-                        ui_state.success_message = Some(format!("Applied noise reduction with threshold: {:.2}", effects_state.noise_reduction_threshold));
+                        ui_state.success_message = Some(format!("Réduction de bruit appliquée avec seuil: {:.2}", effects_state.noise_reduction_threshold));
                         ui_state.current_message_timer = 3.0;
                     }
 
-                    if ui.button("Cancel").clicked() {
+                    if ui.button("Annuler").clicked() {
                         effects_state.show_noise_reduction_modal = false;
                     }
                 });
