@@ -1,10 +1,9 @@
+use crate::audio::AudioData;
+use crate::effects::EffectsState;
+use crate::ui::UIState;
 use eframe::{egui, App, Frame, NativeOptions};
 use egui::Vec2;
-use std::sync::Arc;
-use std::sync::Mutex;
-use crate::audio::AudioData;
-use crate::ui::UIState;
-use crate::effects::EffectsState;
+use std::sync::{Arc, Mutex};
 
 mod audio;
 mod effects;
@@ -28,7 +27,12 @@ impl Default for AudioEditor {
 
 impl App for AudioEditor {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
-        ui::render_ui(ctx, &mut self.ui_state, &self.audio_data, &mut self.effects_state);
+        ui::render_ui(
+            ctx,
+            &mut self.ui_state,
+            &self.audio_data,
+            &mut self.effects_state,
+        );
     }
 }
 
@@ -43,5 +47,6 @@ fn main() {
         "Éditeur de son",
         options,
         Box::new(|_cc| Ok(Box::new(AudioEditor::default()))), // Ajout de Ok()
-    ).unwrap();
+    )
+    .unwrap();
 }
