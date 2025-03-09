@@ -1,5 +1,6 @@
 use crate::audio::AudioData;
 use crate::effects::{self, EffectsState};
+use crate::playback::PlaybackManager;
 use eframe::egui::{self, Align, Align2, CentralPanel, Color32, Context, Layout, Stroke, TopBottomPanel, Ui, Vec2, Visuals, Window};
 use rfd::FileDialog;
 use std::sync::{Arc, Mutex};
@@ -35,6 +36,7 @@ pub fn render_ui(
     ui_state: &mut UIState,
     audio_data: &Arc<Mutex<AudioData>>,
     effects_state: &mut EffectsState,
+    playback_manager: &mut PlaybackManager,
 ) {
     ctx.set_visuals(Visuals::dark());
 
@@ -72,7 +74,7 @@ pub fn render_ui(
     // Central area
     CentralPanel::default().show(ctx, |ui| {
         match ui_state.selected_tab {
-            Tab::FILE => render_file_tab(ui, audio_data, ui_state),
+            Tab::FILE => render_file_tab(ui, audio_data, ui_state, playback_manager),
             Tab::EFFECTS => render_effects_tab(ui, audio_data, effects_state, ui_state),
         }
     });
@@ -100,7 +102,12 @@ pub fn render_ui(
     }
 }
 
-fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &mut UIState) {
+fn render_file_tab(
+    ui: &mut Ui, 
+    audio_data: &Arc<Mutex<AudioData>>, 
+    ui_state: &mut UIState,
+    playback_manager: &mut PlaybackManager
+) {
     ui.vertical_centered(|ui| {
         ui.add_space(20.0);
 
@@ -230,10 +237,19 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
         // Playback controls
         ui.horizontal(|ui| {
             if ui.button(if audio.playing { "⏸ Pause" } else { "▶ Lecture" }).clicked() {
-                audio.playing = !audio.playing;
+                // Use the playback manager to toggle playback
+                drop(audio); // Release the lock first
+                
+                if let Err(e) = playback_manager.toggle_playback(audio_data.clone()) {
+                    ui_state.error_message = Some(format!("Erreur de lecture: {}", e));
+                    ui_state.current_message_timer = MESSAGE_TIMER;
+                }
+                
+                audio = audio_data.lock().unwrap(); // Re-acquire lock
             }
 
             if ui.button("⏹ Arrêt").clicked() {
+                playback_manager.stop_playback();
                 audio.playing = false;
                 audio.playback_position = 0;
             }
@@ -253,7 +269,7 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
 fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_state: &mut EffectsState, ui_state: &mut UIState) {
     let audio_loaded = audio_data.lock().unwrap().samples.len() > 0;
 
-    if !audio_loaded {
+    if (!audio_loaded) {
         ui.vertical_centered(|ui| {
             ui.add_space(50.0);
             ui.label("Aucun fichier audio chargé. Veuillez d'abord importer un fichier audio.");

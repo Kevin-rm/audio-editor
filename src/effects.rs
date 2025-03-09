@@ -1,4 +1,3 @@
-#[derive(Default)]
 pub struct EffectsState {
     pub amplify_gain: f32,
     pub anti_distortion_threshold: f32,
@@ -8,25 +7,36 @@ pub struct EffectsState {
     pub show_noise_reduction_modal: bool,
 }
 
-// Amplification effect
+impl Default for EffectsState {
+    fn default() -> Self {
+        Self {
+            amplify_gain: 1.0,
+            anti_distortion_threshold: 0.8,
+            noise_reduction_threshold: 0.01,
+            show_amplify_modal: false,
+            show_anti_distortion_modal: false,
+            show_noise_reduction_modal: false,
+        }
+    }
+}
+
+// Apply amplification effect
 pub fn amplify(samples: &mut [f32], gain: f32) {
     for sample in samples.iter_mut() {
         *sample *= gain;
     }
 }
 
-// Anti-distortion (limiter) effect
+// Apply anti-distortion (limiter)
 pub fn anti_distortion(samples: &mut [f32], threshold: f32) {
     for sample in samples.iter_mut() {
-        if *sample > threshold {
-            *sample = threshold;
-        } else if *sample < -threshold {
-            *sample = -threshold;
+        if sample.abs() > threshold {
+            *sample = threshold * sample.signum();
         }
     }
 }
 
-// Noise reduction using a simple threshold-based gate
+// Apply simple noise reduction
 pub fn noise_reduction(samples: &mut [f32], threshold: f32) {
     for sample in samples.iter_mut() {
         if sample.abs() < threshold {
@@ -35,23 +45,18 @@ pub fn noise_reduction(samples: &mut [f32], threshold: f32) {
     }
 }
 
-// Compute the RMS (Root Mean Square) of an audio buffer
+// Calculate peak amplitude
+pub fn compute_peak(samples: &[f32]) -> f32 {
+    samples.iter().map(|s| s.abs()).fold(0.0, f32::max)
+}
+
+// Calculate RMS (Root Mean Square)
 pub fn compute_rms(samples: &[f32]) -> f32 {
     if samples.is_empty() {
         return 0.0;
     }
-
-    let sum_squares: f32 = samples.iter().map(|sample| sample * sample).sum();
-    (sum_squares / samples.len() as f32).sqrt()
-}
-
-// Compute the peak amplitude of an audio buffer
-pub fn compute_peak(samples: &[f32]) -> f32 {
-    if samples.is_empty() {
-        return 0.0;
-    }
-
-    samples.iter().map(|sample| sample.abs()).fold(0.0, f32::max)
+    let sum_squared: f32 = samples.iter().map(|s| s * s).sum();
+    (sum_squared / samples.len() as f32).sqrt()
 }
 
 // More sophisticated noise reduction using spectral subtraction technique
