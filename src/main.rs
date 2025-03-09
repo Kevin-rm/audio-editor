@@ -1,6 +1,7 @@
 use crate::audio::AudioData;
 use crate::effects::EffectsState;
 use crate::ui::UIState;
+use eframe::egui::{Context, ViewportBuilder};
 use eframe::{egui, App, Frame, NativeOptions};
 use egui::Vec2;
 use std::sync::{Arc, Mutex};
@@ -26,7 +27,7 @@ impl Default for AudioEditor {
 }
 
 impl App for AudioEditor {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         ui::render_ui(
             ctx,
             &mut self.ui_state,
@@ -38,8 +39,7 @@ impl App for AudioEditor {
 
 fn main() {
     let options = NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size(Vec2::new(1280.0, 720.0)), // Définit la taille de la fenêtre
+        viewport: ViewportBuilder::default().with_inner_size(Vec2::new(1280.0, 720.0)), // Définit la taille de la fenêtre
         ..Default::default()
     };
 

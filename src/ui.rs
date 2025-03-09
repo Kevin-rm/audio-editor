@@ -1,69 +1,68 @@
 use crate::audio::AudioData;
 use crate::effects::{self, EffectsState};
-use eframe::egui::{self, Color32, Stroke, Ui, Vec2};
+use eframe::egui::{self, Align, Align2, CentralPanel, Color32, Context, Layout, Stroke, TopBottomPanel, Ui, Vec2, Visuals, Window};
 use rfd::FileDialog;
 use std::sync::{Arc, Mutex};
 
+const MESSAGE_TIMER: f32 = 3.0;
+
 pub struct UIState {
-    pub selected_tab: Tab,
-    pub error_message: Option<String>,
-    pub success_message: Option<String>,
-    pub message_timer: f32,
+    selected_tab: Tab,
+    error_message: Option<String>,
+    success_message: Option<String>,
+    current_message_timer: f32,
 }
 
 #[derive(PartialEq)]
 pub enum Tab {
-    File,
-    Effects,
+    FILE,
+    EFFECTS,
 }
 
 impl Default for UIState {
     fn default() -> Self {
         Self {
-            selected_tab: Tab::File,
+            selected_tab: Tab::FILE,
             error_message: None,
             success_message: None,
-            message_timer: 0.0,
+            current_message_timer: 0.0,
         }
     }
 }
 
 pub fn render_ui(
-    ctx: &egui::Context,
+    ctx: &Context,
     ui_state: &mut UIState,
     audio_data: &Arc<Mutex<AudioData>>,
     effects_state: &mut EffectsState,
 ) {
-    // Apply dark theme
-    ctx.set_visuals(egui::Visuals::dark());
+    ctx.set_visuals(Visuals::dark());
 
     // Handle message timers
     if ui_state.error_message.is_some() || ui_state.success_message.is_some() {
-        ui_state.message_timer -= ctx.input(|input_state| input_state.unstable_dt);
-        if ui_state.message_timer <= 0.0 {
+        ui_state.current_message_timer -= ctx.input(|is| is.unstable_dt);
+        if ui_state.current_message_timer <= 0.0 {
             ui_state.error_message = None;
             ui_state.success_message = None;
         }
     }
 
     // Top panel with tabs
-    egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+    TopBottomPanel::top("top_panel").show(ctx, |ui| {
         ui.horizontal(|ui| {
-            ui.selectable_value(&mut ui_state.selected_tab, Tab::File, "File");
-            ui.selectable_value(&mut ui_state.selected_tab, Tab::Effects, "Effects");
+            ui.selectable_value(&mut ui_state.selected_tab, Tab::FILE, "Fichier");
+            ui.selectable_value(&mut ui_state.selected_tab, Tab::EFFECTS, "Effets");
 
             // Right-aligned status
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if let Ok(audio) = audio_data.lock() {
                     if audio.samples.is_empty() {
-                        ui.label("No audio loaded");
+                        ui.label("Aucun audio chargé");
                     } else {
                         let duration_str = format!("{:.1}s", audio.duration_seconds);
                         ui.label(format!("{}Hz | {}ch | {}", audio.sample_rate, audio.channels, duration_str));
 
-                        if audio.modified {
-                            ui.label("Modified");
-                        }
+                        if audio.modified { ui.label("Modifié"); }
                     }
                 }
             });
@@ -71,10 +70,10 @@ pub fn render_ui(
     });
 
     // Central area
-    egui::CentralPanel::default().show(ctx, |ui| {
+    CentralPanel::default().show(ctx, |ui| {
         match ui_state.selected_tab {
-            Tab::File => render_file_tab(ui, audio_data, ui_state),
-            Tab::Effects => render_effects_tab(ui, audio_data, effects_state, ui_state),
+            Tab::FILE => render_file_tab(ui, audio_data, ui_state),
+            Tab::EFFECTS => render_effects_tab(ui, audio_data, effects_state, ui_state),
         }
     });
 
@@ -83,8 +82,8 @@ pub fn render_ui(
 
     // Show messages
     if let Some(error) = &ui_state.error_message {
-        egui::Window::new("Error")
-            .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -10.0])
+        Window::new("Erreur")
+            .anchor(Align2::CENTER_BOTTOM, [0.0, -10.0])
             .collapsible(false)
             .show(ctx, |ui| {
                 ui.colored_label(Color32::RED, error);
@@ -92,7 +91,7 @@ pub fn render_ui(
     }
 
     if let Some(success) = &ui_state.success_message {
-        egui::Window::new("Success")
+        Window::new("Succès")
             .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -10.0])
             .collapsible(false)
             .show(ctx, |ui| {
@@ -105,7 +104,7 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
     ui.vertical_centered(|ui| {
         ui.add_space(20.0);
 
-        if ui.button("Import Audio File").clicked() {
+        if ui.button("Importer un fichier audio").clicked() {
             if let Some(path) = FileDialog::new()
                 .add_filter("WAV Files", &["wav"])
                 .pick_file() {
@@ -113,12 +112,12 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
                 let mut audio = audio_data.lock().unwrap();
                 match audio.load_file(path) {
                     Ok(_) => {
-                        ui_state.success_message = Some("File loaded successfully".to_string());
-                        ui_state.message_timer = 3.0;
+                        ui_state.success_message = Some("Fichier chargé avec succès".to_string());
+                        ui_state.current_message_timer = MESSAGE_TIMER;
                     },
                     Err(e) => {
-                        ui_state.error_message = Some(format!("Error loading file: {}", e));
-                        ui_state.message_timer = 3.0;
+                        ui_state.error_message = Some(format!("Erreur lors du chargement du fichier: {}", e));
+                        ui_state.current_message_timer = MESSAGE_TIMER;
                     },
                 }
             }
@@ -126,21 +125,21 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
 
         ui.add_space(10.0);
 
-        if ui.button("Save").clicked() {
+        if ui.button("Sauvegarder").clicked() {
             let audio = audio_data.lock().unwrap();
             if audio.file_path.is_none() {
                 drop(audio);
-                ui_state.error_message = Some("No file loaded".to_string());
-                ui_state.message_timer = 3.0;
+                ui_state.error_message = Some("Aucun fichier chargé".to_string());
+                ui_state.current_message_timer = MESSAGE_TIMER;
             } else {
                 match audio.save_file(None) {
                     Ok(_) => {
                         ui_state.success_message = Some("File saved successfully".to_string());
-                        ui_state.message_timer = 3.0;
+                        ui_state.current_message_timer = 3.0;
                     },
                     Err(e) => {
                         ui_state.error_message = Some(format!("Error saving file: {}", e));
-                        ui_state.message_timer = 3.0;
+                        ui_state.current_message_timer = 3.0;
                     },
                 }
             }
@@ -153,7 +152,7 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
             if audio.samples.is_empty() {
                 drop(audio);
                 ui_state.error_message = Some("No audio loaded".to_string());
-                ui_state.message_timer = 3.0;
+                ui_state.current_message_timer = 3.0;
             } else {
                 if let Some(path) = FileDialog::new()
                     .add_filter("WAV Files", &["wav"])
@@ -162,11 +161,11 @@ fn render_file_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, ui_state: &m
                     match audio.save_file(Some(path)) {
                         Ok(_) => {
                             ui_state.success_message = Some("File saved successfully".to_string());
-                            ui_state.message_timer = 3.0;
+                            ui_state.current_message_timer = 3.0;
                         },
                         Err(e) => {
                             ui_state.error_message = Some(format!("Error saving file: {}", e));
-                            ui_state.message_timer = 3.0;
+                            ui_state.current_message_timer = 3.0;
                         },
                     }
                 }
@@ -280,7 +279,7 @@ fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_s
                 audio.generate_visualization_data();
 
                 ui_state.success_message = Some(format!("Applied amplification with gain: {:.2}", effects_state.amplify_gain));
-                ui_state.message_timer = 3.0;
+                ui_state.current_message_timer = 3.0;
             }
         });
 
@@ -299,7 +298,7 @@ fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_s
                 audio.generate_visualization_data();
 
                 ui_state.success_message = Some(format!("Applied anti-distortion with threshold: {:.2}", effects_state.anti_distortion_threshold));
-                ui_state.message_timer = 3.0;
+                ui_state.current_message_timer = 3.0;
             }
         });
 
@@ -318,7 +317,7 @@ fn render_effects_tab(ui: &mut Ui, audio_data: &Arc<Mutex<AudioData>>, effects_s
                 audio.generate_visualization_data();
 
                 ui_state.success_message = Some(format!("Applied noise reduction with threshold: {:.2}", effects_state.noise_reduction_threshold));
-                ui_state.message_timer = 3.0;
+                ui_state.current_message_timer = 3.0;
             }
         });
 
@@ -365,7 +364,7 @@ fn render_modals(
 
                         effects_state.show_amplify_modal = false;
                         ui_state.success_message = Some(format!("Applied amplification with gain: {:.2}", effects_state.amplify_gain));
-                        ui_state.message_timer = 3.0;
+                        ui_state.current_message_timer = 3.0;
                     }
 
                     if ui.button("Cancel").clicked() {
@@ -397,7 +396,7 @@ fn render_modals(
 
                         effects_state.show_anti_distortion_modal = false;
                         ui_state.success_message = Some(format!("Applied anti-distortion with threshold: {:.2}", effects_state.anti_distortion_threshold));
-                        ui_state.message_timer = 3.0;
+                        ui_state.current_message_timer = 3.0;
                     }
 
                     if ui.button("Cancel").clicked() {
@@ -409,9 +408,9 @@ fn render_modals(
 
     // Noise reduction modal
     if effects_state.show_noise_reduction_modal {
-        egui::Window::new("Noise Reduction Settings")
+        Window::new("Noise Reduction Settings")
             .fixed_size([300.0, 150.0])
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
@@ -429,7 +428,7 @@ fn render_modals(
 
                         effects_state.show_noise_reduction_modal = false;
                         ui_state.success_message = Some(format!("Applied noise reduction with threshold: {:.2}", effects_state.noise_reduction_threshold));
-                        ui_state.message_timer = 3.0;
+                        ui_state.current_message_timer = 3.0;
                     }
 
                     if ui.button("Cancel").clicked() {
