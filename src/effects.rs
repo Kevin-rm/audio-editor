@@ -1,6 +1,3 @@
-use rustfft::FftPlanner;
-use rustfft::num_complex::Complex;
-
 pub struct EffectsState {
     pub amplify_gain: f32,
     pub anti_distortion_threshold: f32,
