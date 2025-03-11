@@ -121,7 +121,7 @@ impl AudioData {
 
                 // Data chunk
                 id if id == &DATA_CHUNK_ID => {
-                    if (!found_fmt) {
+                    if !found_fmt {
                         return Err(WavError::FormatError(
                             "Found data chunk before format chunk",
                         ));
@@ -192,7 +192,7 @@ impl AudioData {
             }
         }
 
-        if (!found_data) {
+        if !found_data {
             return Err(WavError::FormatError("No data chunk found"));
         }
 
