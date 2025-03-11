@@ -7,6 +7,7 @@ use eframe::egui::{
 };
 use rfd::FileDialog;
 use std::sync::{Arc, Mutex};
+use std::path::Path;
 
 const MESSAGE_TIMER: f32 = 3.0;
 
@@ -367,25 +368,47 @@ fn render_effects_tab(
 
         ui.add_space(10.0);
 
-        // Noise reduction
+        // Noise Cancellation (renamed from Noise Reduction)
         ui.horizontal(|ui| {
-            ui.label("Réduction de bruit: ");
+            ui.label("Anti-bruit: ");
             if ui.button("Configurer").clicked() {
                 effects_state.show_noise_reduction_modal = true;
             }
             if ui.button("Appliquer").clicked() {
                 let mut audio = audio_data.lock().unwrap();
-                effects::noise_reduction(
-                    &mut audio.samples,
-                    effects_state.noise_reduction_threshold,
-                );
+                
+                if effects_state.noise_profile_loaded {
+                    // Use the imported noise profile for cancellation
+                    let adjusted_profile = effects::adjust_noise_profile(
+                        &effects_state.noise_profile,
+                        audio.samples.len()
+                    );
+                    
+                    effects::noise_cancellation(
+                        &mut audio.samples,
+                        &adjusted_profile,
+                        effects_state.noise_reduction_threshold,
+                    );
+                    
+                    ui_state.success_message = Some(format!(
+                        "Anti-bruit appliqué avec le profil '{}'",
+                        effects_state.noise_profile_name
+                    ));
+                } else {
+                    // Fallback to simple noise reduction
+                    effects::noise_reduction(
+                        &mut audio.samples,
+                        effects_state.noise_reduction_threshold,
+                    );
+                    
+                    ui_state.success_message = Some(format!(
+                        "Réduction de bruit simple appliquée avec seuil: {:.3}",
+                        effects_state.noise_reduction_threshold
+                    ));
+                }
+                
                 audio.modified = true;
                 audio.generate_visualization_data();
-
-                ui_state.success_message = Some(format!(
-                    "Réduction de bruit appliquée avec seuil: {:.2}",
-                    effects_state.noise_reduction_threshold
-                ));
                 ui_state.current_message_timer = 3.0;
             }
         });
@@ -490,18 +513,75 @@ fn render_modals(
             });
     }
 
-    // Noise reduction modal
+    // Noise cancellation modal (renamed from Noise Reduction)
     if effects_state.show_noise_reduction_modal {
-        Window::new("Paramètres de Réduction de Bruit")
-            .fixed_size([300.0, 150.0])
+        Window::new("Paramètres d'Anti-bruit")
+            .fixed_size([400.0, 250.0])
             .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
-                ui.label("Définir le niveau de seuil du bruit:");
+                ui.label("Configuration de la suppression de bruit:");
+
+                // Noise profile management
+                ui.group(|ui| {
+                    ui.label("Profil de bruit:");
+                    
+                    if effects_state.noise_profile_loaded {
+                        ui.horizontal(|ui| {
+                            ui.label(&effects_state.noise_profile_name);
+                            if ui.button("❌").clicked() {
+                                effects_state.noise_profile.clear();
+                                effects_state.noise_profile_loaded = false;
+                                effects_state.noise_profile_name = String::new();
+                            }
+                        });
+                    } else {
+                        ui.label("Aucun profil chargé");
+                    }
+                    
+                    ui.horizontal(|ui| {
+                        if ui.button("Importer un profil de bruit").clicked() {
+                            if let Some(path) = FileDialog::new()
+                                .add_filter("Fichiers WAV", &["wav"])
+                                .set_title("Sélectionner un fichier de bruit")
+                                .pick_file() 
+                            {
+                                match effects::import_noise_profile(path.clone()) {
+                                    Ok(profile) => {
+                                        effects_state.noise_profile = profile;
+                                        effects_state.noise_profile_loaded = true;
+                                        effects_state.noise_profile_name = path.file_name()
+                                            .and_then(|n| n.to_str())
+                                            .unwrap_or("profil")
+                                            .to_string();
+                                        
+                                        ui_state.success_message = Some(format!(
+                                            "Profil de bruit '{}' importé",
+                                            effects_state.noise_profile_name
+                                        ));
+                                        ui_state.current_message_timer = 3.0;
+                                    },
+                                    Err(e) => {
+                                        ui_state.error_message = Some(format!(
+                                            "Erreur lors de l'importation du profil: {}", e
+                                        ));
+                                        ui_state.current_message_timer = 3.0;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                ui.add_space(10.0);
+                
+                // Threshold setting
+                ui.label("Niveau de seuil pour la suppression:");
                 ui.add(
                     egui::Slider::new(&mut effects_state.noise_reduction_threshold, 0.001..=0.1)
-                        .text("Seuil"),
+                        .text("Seuil")
+                        .logarithmic(true),
                 );
 
                 ui.separator();
@@ -509,18 +589,38 @@ fn render_modals(
                 ui.horizontal(|ui| {
                     if ui.button("Appliquer").clicked() {
                         let mut audio = audio_data.lock().unwrap();
-                        effects::noise_reduction(
-                            &mut audio.samples,
-                            effects_state.noise_reduction_threshold,
-                        );
+                        
+                        if effects_state.noise_profile_loaded {
+                            let adjusted_profile = effects::adjust_noise_profile(
+                                &effects_state.noise_profile,
+                                audio.samples.len()
+                            );
+                            
+                            effects::noise_cancellation(
+                                &mut audio.samples,
+                                &adjusted_profile,
+                                effects_state.noise_reduction_threshold,
+                            );
+                            
+                            ui_state.success_message = Some(format!(
+                                "Anti-bruit appliqué avec le profil '{}'",
+                                effects_state.noise_profile_name
+                            ));
+                        } else {
+                            effects::noise_reduction(
+                                &mut audio.samples,
+                                effects_state.noise_reduction_threshold,
+                            );
+                            
+                            ui_state.success_message = Some(
+                                "Réduction de bruit simple appliquée (aucun profil)"
+                                    .to_string()
+                            );
+                        }
+                        
                         audio.modified = true;
                         audio.generate_visualization_data();
-
                         effects_state.show_noise_reduction_modal = false;
-                        ui_state.success_message = Some(format!(
-                            "Réduction de bruit appliquée avec seuil: {:.2}",
-                            effects_state.noise_reduction_threshold
-                        ));
                         ui_state.current_message_timer = 3.0;
                     }
 
