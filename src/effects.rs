@@ -27,11 +27,22 @@ pub fn amplify(samples: &mut [f32], gain: f32) {
     }
 }
 
-// Apply anti-distortion (limiter)
+// Appliquer un anti-distorsion avec un soft knee
 pub fn anti_distortion(samples: &mut [f32], threshold: f32) {
+    let knee_width = 0.1; // Zone de transition douce
+
     for sample in samples.iter_mut() {
-        if sample.abs() > threshold {
-            *sample = threshold * sample.signum();
+        let abs_sample = sample.abs();
+        if abs_sample > threshold {
+            if abs_sample < threshold + knee_width {
+                // Appliquer une compression douce (soft knee)
+                let excess = abs_sample - threshold;
+                let soft_factor = excess / knee_width;
+                *sample = (threshold + (1.0 - soft_factor) * excess) * sample.signum();
+            } else {
+                // Limitation dure au-delà de la zone de transition
+                *sample = threshold * sample.signum();
+            }
         }
     }
 }
