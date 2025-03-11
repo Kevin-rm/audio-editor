@@ -140,15 +140,6 @@ pub fn noise_cancellation(samples: &mut [f32], noise_profile: &[f32], threshold:
     }
 }
 
-// Simple noise reduction for backward compatibility
-pub fn noise_reduction(samples: &mut [f32], threshold: f32) {
-    for sample in samples.iter_mut() {
-        if sample.abs() < threshold {
-            *sample = 0.0;
-        }
-    }
-}
-
 // Calculate peak amplitude
 pub fn compute_peak(samples: &[f32]) -> f32 {
     samples.iter().map(|s| s.abs()).fold(0.0, f32::max)
