@@ -1,7 +1,7 @@
+use crate::audio::playback::PlaybackManager;
 use crate::audio::AudioData;
 use crate::effects::EffectsState;
 use crate::ui::UIState;
-use crate::playback::PlaybackManager;
 use eframe::egui::{Context, ViewportBuilder};
 use eframe::{egui, App, Frame, NativeOptions};
 use egui::Vec2;
@@ -10,7 +10,6 @@ use std::sync::{Arc, Mutex};
 mod audio;
 mod effects;
 mod ui;
-mod playback;
 
 struct AudioEditor {
     audio_data: Arc<Mutex<AudioData>>,
@@ -34,7 +33,7 @@ impl App for AudioEditor {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         // Update playback state in UI
         self.playback_manager.update_ui(&self.audio_data);
-        
+
         ui::render_ui(
             ctx,
             &mut self.ui_state,
