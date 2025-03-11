@@ -416,9 +416,9 @@ fn render_modals(
 ) {
     // Amplification modal
     if effects_state.show_amplify_modal {
-        egui::Window::new("Paramètres d'Amplification")
+        Window::new("Paramètres d'Amplification")
             .fixed_size([300.0, 150.0])
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
@@ -451,9 +451,9 @@ fn render_modals(
 
     // Anti-distortion modal
     if effects_state.show_anti_distortion_modal {
-        egui::Window::new("Paramètres d'Anti-distorsion")
+        Window::new("Paramètres d'Anti-distorsion")
             .fixed_size([300.0, 150.0])
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
